@@ -1,62 +1,58 @@
 ﻿cmake_minimum_required(VERSION 3.16)
 project(InstallService LANGUAGES CXX)
 
-# -----------------------------
-# 1) Исходники приложения
-# -----------------------------
-# Инициализация переменной для хранения списка исходных файлов
-set(APP_SOURCES)
-
-# Все .cpp внутри папки InstallService (и её подпапок, если они есть)
-file(GLOB_RECURSE APP_SOURCES CONFIGURE_DEPENDS
-     "${CMAKE_CURRENT_SOURCE_DIR}/InstallService/*.cpp"
+# Создаем исполняемый файл
+add_executable(InstallService
+  src/main.cpp
+  src/Cli.cpp
+  src/Installer.cpp
+  src/Paths.cpp
+  src/Platform.cpp
 )
+# Требуемые стандарты C++
+target_compile_features(InstallService PRIVATE cxx_std_20)
 
-# Создание исполняемого файла
-add_executable(InstallService ${APP_SOURCES})
-  
-# Установка стандарта C++23
-set_target_properties(InstallService PROPERTIES
-    CXX_STANDARD 23
-    CXX_STANDARD_REQUIRED ON
-    CXX_EXTENSIONS OFF
-)
-
-# -----------------------------
-# 2) Include-пути
-# -----------------------------
+# Включаемые директории
 target_include_directories(InstallService PRIVATE
   "${CMAKE_CURRENT_SOURCE_DIR}/include"
+  "${CMAKE_CURRENT_SOURCE_DIR}/src"
 )
 
-# -----------------------------
-# 3) glog 
-# -----------------------------
+# glog
 set(GLOG_ROOT "${CMAKE_CURRENT_SOURCE_DIR}/glog")
 
-# Добавить include-папку glog
 target_include_directories(InstallService PRIVATE
-    "${GLOG_ROOT}/include"
+  "${GLOG_ROOT}/include"
 )
+
 target_compile_definitions(InstallService PRIVATE
   GLOG_NO_ABBREVIATED_SEVERITIES
   GLOG_CUSTOM_PREFIX_SUPPORT
 )
 
-# линковка с библиотеками
 target_link_libraries(InstallService PRIVATE
-  "${GLOG_ROOT}/lib/glog.lib"
   shell32
+  "${GLOG_ROOT}/lib/glog.lib"
 )
 
-# копирование glog.dll в папку с бинарниками CMake
 add_custom_command(TARGET InstallService POST_BUILD
-    COMMAND ${CMAKE_COMMAND} -E copy_if_different
-        "${GLOG_ROOT}/bin/glog.dll"
-        $<TARGET_FILE_DIR:InstallService>
+  COMMAND ${CMAKE_COMMAND} -E copy_if_different
+          "${GLOG_ROOT}/bin/glog.dll"
+          "$<TARGET_FILE_DIR:InstallService>"
 )
-# Включение горячей перезагрузки для компиляторов MSVC, если поддерживается.
-if (POLICY CMP0141)
-  cmake_policy(SET CMP0141 NEW)
-  set(CMAKE_MSVC_DEBUG_INFORMATION_FORMAT "$<IF:$<AND:$<C_COMPILER_ID:MSVC>,$<CXX_COMPILER_ID:MSVC>>,$<$<CONFIG:Debug,RelWithDebInfo>:EditAndContinue>,$<$<CONFIG:Debug,RelWithDebInfo>:ProgramDatabase>>")
+# Платформо-зависимые исходники
+if (WIN32)
+  target_sources(InstallService PRIVATE
+    src/platform/PlatformImpl.hpp
+    src/platform/windows/PlatformWin.cpp
+    src/platform/windows/BackendWinSc.cpp
+  )
+elseif (UNIX AND NOT APPLE)
+  target_sources(InstallService PRIVATE
+    src/platform/PlatformImpl.hpp
+    src/platform/linux/PlatformLinux.cpp
+    src/platform/linux/BackendLinuxSystemd.cpp
+  )
+else()
+  message(FATAL_ERROR "Unsupported platform")
 endif()

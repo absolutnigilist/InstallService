@@ -8,7 +8,8 @@ add_executable(InstallService
   src/Installer.cpp
   src/Paths.cpp
   src/Platform.cpp
-)
+  src/Process.cpp
+ )
 # Требуемые стандарты C++
 target_compile_features(InstallService PRIVATE cxx_std_20)
 
@@ -46,12 +47,16 @@ if (WIN32)
     src/platform/PlatformImpl.hpp
     src/platform/windows/PlatformWin.cpp
     src/platform/windows/BackendWinSc.cpp
+    src/platform/ProcessImpl.hpp
+    src/platform/windows/ProcessWin.cpp
   )
 elseif (UNIX AND NOT APPLE)
   target_sources(InstallService PRIVATE
     src/platform/PlatformImpl.hpp
     src/platform/linux/PlatformLinux.cpp
     src/platform/linux/BackendLinuxSystemd.cpp
+    src/platform/ProcessImpl.hpp
+    src/platform/linux/ProcessLinux.cpp
   )
 else()
   message(FATAL_ERROR "Unsupported platform")

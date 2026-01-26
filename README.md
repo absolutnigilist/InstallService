@@ -12,4 +12,4 @@ Examples:
   service-installer --install --name=Valenta --exe=Valenta.exe --run
   service-installer --uninstall --name=Valenta --stop
   service-installer --start --name=Valenta
-  service-installer --stop  --name=Valenta
+  service-installer --stop  --name=Valentaïî

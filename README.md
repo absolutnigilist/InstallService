@@ -13,3 +13,4 @@ Examples:
   service-installer --uninstall --name=Valenta --stop
   service-installer --start --name=Valenta
   service-installer --stop  --name=Valentaïî
+  ServiceInstaller.exe --uninstall --name=Valenta --stop-first --from-inno --delete=data --data-root=...

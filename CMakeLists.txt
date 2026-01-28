@@ -49,6 +49,7 @@ if (WIN32)
     src/platform/windows/BackendWinSc.cpp
     src/platform/ProcessImpl.hpp
     src/platform/windows/ProcessWin.cpp
+    src/platform/windows/RemoveDirWin.cpp
   )
 elseif (UNIX AND NOT APPLE)
   target_sources(InstallService PRIVATE
@@ -57,6 +58,7 @@ elseif (UNIX AND NOT APPLE)
     src/platform/linux/BackendLinuxSystemd.cpp
     src/platform/ProcessImpl.hpp
     src/platform/linux/ProcessLinux.cpp
+    src/platform/linux/RemoveDirLinux.cpp
   )
 else()
   message(FATAL_ERROR "Unsupported platform")

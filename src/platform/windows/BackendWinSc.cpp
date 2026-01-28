@@ -87,11 +87,28 @@ namespace svcinst {
         }
         return false;
     }
+    //---
+    static std::string wideToUtf8(std::wstring_view w)
+    {
+        if (w.empty()) return {};
+
+        int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(),
+            nullptr, 0, nullptr, nullptr);
+        if (n <= 0) return {};
+
+        std::string s((size_t)n, '\0');
+        WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(),
+            s.data(), n, nullptr, nullptr);
+        return s;
+    }
 	//---Преобразование fs::path в std::string в кодировке UTF-8
     static std::string pathToUtf8(const fs::path& p)
     {
-        auto u8 = p.u8string();              // std::u8string
-        return std::string(u8.begin(), u8.end());
+#ifdef _WIN32
+        return wideToUtf8(p.wstring());
+#else
+        return p.string();
+#endif
     }
 
     //---Значение для binPath: "\"C:\...\app.exe\" <args>"

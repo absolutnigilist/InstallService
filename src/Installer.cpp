@@ -3,12 +3,56 @@
 #include "service_installer/Paths.hpp"
 #include "service_installer/ServiceSpec.hpp"
 #include "service_installer/IServiceBackend.hpp"
+#include "platform/PlatformImpl.hpp" 
 
 #include <iostream>
 #include <filesystem>
 #include <glog/logging.h>
 
 namespace svcinst {
+
+	namespace {
+
+		static bool wantDeleteInstallDir(svcinst::DeletePolicy p)
+		{
+			return p == svcinst::DeletePolicy::InstallDir || p == svcinst::DeletePolicy::All;
+		}
+
+		static bool wantDeleteDataRoot(svcinst::DeletePolicy p)
+		{
+			return p == svcinst::DeletePolicy::DataRoot || p == svcinst::DeletePolicy::All;
+		}
+
+		static void cleanupAfterUninstall(const svcinst::CliOptions& opt)
+		{
+			// DataRoot
+			if (wantDeleteDataRoot(opt.del))
+			{
+				if (!opt.dataRoot.empty())
+				{
+					std::string delErr;
+					(void)svcinst::platform::removeDataRoot(svcinst::fs::path(opt.dataRoot), &delErr);
+					if (!delErr.empty())
+						LOG(WARNING) << "removeDataRoot: " << delErr;
+				}
+				else
+				{
+					LOG(WARNING) << "DeletePolicy requires DataRoot, but --data-root is empty";
+				}
+			}
+
+			// InstallDir
+			if (wantDeleteInstallDir(opt.del))
+			{
+				const svcinst::fs::path installDir = svcinst::selfDir();
+
+				std::string delErr;
+				(void)svcinst::platform::removeInstallDir(installDir, &delErr, opt.fromInno);
+				if (!delErr.empty())
+					LOG(WARNING) << "removeInstallDir: " << delErr;
+			}
+		}
+	} // namespace
 
 	//---Логирование ошибки и возврат кода ошибки
 	static int fail(const std::string& msg) {
@@ -86,7 +130,10 @@ namespace svcinst {
 		//---Если команда — удаление службы
 		if (opt.cmd == Command::Uninstall)
 		{
-			if (!backend->uninstall(opt.name, opt.stopFirst, &err)) return fail(err.empty() ? "uninstall failed." : err);
+			if (!backend->uninstall(opt.name, opt.stopFirst, &err))
+				return fail(err.empty() ? "uninstall failed." : err);
+
+			cleanupAfterUninstall(opt);
 			return 0;
 		}
 		//---Если команда — запуск службы

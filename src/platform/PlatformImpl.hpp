@@ -17,6 +17,10 @@ namespace svcinst {
 		bool isElevated();
 		//---Cоздание бэкенда для текущей платформы
 		std::unique_ptr<IServiceBackend> makeBackend();
+		//---Удалить папку установки (fromInno: Windows-only смысл (если true — installDir не трогаем))
+		bool removeInstallDir(const fs::path& installDir, std::string* error, bool fromInno = false);
+		//---Удалить DataRoot (данные/кэш/сигналы и т.п.)
+		bool removeDataRoot(const fs::path& dataRoot, std::string* error);
 	}
 
 } // namespace svcinst

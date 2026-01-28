@@ -14,6 +14,13 @@ namespace svcinst {
 	Invalid
 	};
 
+	//---Политика удаления
+	enum class DeletePolicy {
+		None,						// Не удалять ничего
+		InstallDir,					// Удалить папку установки
+		DataRoot,					// Удалить папку с данными
+		All							// Удалить и установку, и данные
+	};
 	//---Опции командной строки
 	struct CliOptions final {
 	
@@ -29,7 +36,10 @@ namespace svcinst {
 		//---Флаги
 		bool runNow = false;		//	Запустить службу сразу после установки
 		bool stopFirst = false;		//	Остановить службу перед удалением
-	
+
+		DeletePolicy del = DeletePolicy::None; // Политика удаления по умолчанию
+		std::string dataRoot;                  // путь к данным (если нужен)
+		bool fromInno = false;                 // чтобы на Windows не удалять {app} из helper'а
 	};
 
 	CliOptions parceCli(int argc, char** argv);

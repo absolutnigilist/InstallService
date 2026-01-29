@@ -26,6 +26,8 @@ namespace svcinst {
 	
 		//---Команда
 		Command cmd = Command::Help;
+		//---Политика удаления по умолчанию
+		DeletePolicy del = DeletePolicy::None; 
 
 		//---Параметры службы
 		std::string name;			//	Имя службы
@@ -37,9 +39,10 @@ namespace svcinst {
 		bool runNow = false;		//	Запустить службу сразу после установки
 		bool stopFirst = false;		//	Остановить службу перед удалением
 
-		DeletePolicy del = DeletePolicy::None; // Политика удаления по умолчанию
-		std::string dataRoot;                  // путь к данным (если нужен)
-		bool fromInno = false;                 // чтобы на Windows не удалять {app} из helper'а
+		
+
+		std::string dataRoot;       // путь к данным (если нужен)
+		bool fromInno = false;      // чтобы на Windows не удалять {app} из helper'а
 	};
 
 	CliOptions parceCli(int argc, char** argv);

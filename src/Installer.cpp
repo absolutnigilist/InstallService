@@ -25,7 +25,7 @@ namespace svcinst {
 
 		static void cleanupAfterUninstall(const svcinst::CliOptions& opt)
 		{
-			// DataRoot
+			//---DataRoot
 			if (wantDeleteDataRoot(opt.del))
 			{
 				if (!opt.dataRoot.empty())
@@ -41,7 +41,7 @@ namespace svcinst {
 				}
 			}
 
-			// InstallDir
+			//---InstallDir
 			if (wantDeleteInstallDir(opt.del))
 			{
 				const svcinst::fs::path installDir = svcinst::selfDir();
@@ -92,7 +92,7 @@ namespace svcinst {
 		//---Если команда — установка службы 
 		if (opt.cmd == Command::Install)
 		{
-			//---Если путь к исполняемому файлу службы не задано → ошибка
+			//---Если путь к исполняемому файлу службы не задан → ошибка
 			if (opt.exe.empty()) return fail("Missing required option for --install: --exe=<path_to_service_executable>");
 
 			//---Формирование спецификации службы
@@ -130,8 +130,7 @@ namespace svcinst {
 		//---Если команда — удаление службы
 		if (opt.cmd == Command::Uninstall)
 		{
-			if (!backend->uninstall(opt.name, opt.stopFirst, &err))
-				return fail(err.empty() ? "uninstall failed." : err);
+			if (!backend->uninstall(opt.name, opt.stopFirst, &err)) return fail(err.empty() ? "uninstall failed." : err);
 
 			cleanupAfterUninstall(opt);
 			return 0;

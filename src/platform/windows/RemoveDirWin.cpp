@@ -14,7 +14,7 @@ namespace svcinst::platform {
 
     namespace fs = std::filesystem;
     //------------------------------------------------------------
-    //  Safety: не дать снести "опасные" пути типа C:\ или корня
+    //  Safety: пїЅпїЅ пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ "пїЅпїЅпїЅпїЅпїЅпїЅпїЅ" пїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅ C:\ пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     //------------------------------------------------------------
     static bool isDangerousPath(const fs::path& p)
     {
@@ -34,7 +34,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  Снять ReadOnly/Hidden/System (мешают remove_all на Win)
+    //  пїЅпїЅпїЅпїЅпїЅ ReadOnly/Hidden/System (пїЅпїЅпїЅпїЅпїЅпїЅ remove_all пїЅпїЅ Win)
     //------------------------------------------------------------
     static void makeNormalAttributes(const fs::path& p)
     {
@@ -70,7 +70,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  Попытка удалить сразу
+    //  пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅ
     //------------------------------------------------------------
     static bool removeTreeNow(const fs::path& dir, std::string* error)
     {
@@ -96,7 +96,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  Отложенное удаление: cmd.exe в фоне
+    //  пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ: cmd.exe пїЅ пїЅпїЅпїЅпїЅ
     //------------------------------------------------------------
     static fs::path cmdExePath()
     {
@@ -158,12 +158,12 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  Публичные функции
+    //  пїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ
     //------------------------------------------------------------
     bool removeInstallDir(const fs::path& installDir, std::string* error,bool fromInno)
     {
         if (fromInno)
-            return true; // Inno сам удалит {app}, а helper не трогает installDir
+            return true; // Inno пїЅпїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅ {app}, пїЅ helper пїЅпїЅ пїЅпїЅпїЅпїЅпїЅпїЅпїЅ installDir
         std::string err;
         if (removeTreeNow(installDir, &err))
             return true;

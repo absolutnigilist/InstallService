@@ -9,6 +9,7 @@ namespace svcinst {
 
 	//---Платформенно-зависимые реализации
 	namespace platform {
+
 		namespace fs = std::filesystem;
 
 		//---Получение пути к собственному исполняемому файлу

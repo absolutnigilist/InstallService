@@ -27,6 +27,7 @@ namespace svcinst {
 
 		return v;
 	}
+
 	//---Получение значения ключа из аргументов командной строки
 	static std::string getKv(int argc, char** argv, const std::string& key) {
 	

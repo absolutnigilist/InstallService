@@ -217,6 +217,7 @@ namespace svcinst::platform {
         si.cb = sizeof(si);
         PROCESS_INFORMATION pi{};
 
+        //---Создаем процесс
         BOOL ok = CreateProcessW(
             nullptr,
             buf.data(),

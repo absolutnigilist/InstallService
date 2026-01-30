@@ -56,7 +56,7 @@ namespace svcinst {
                 std::ostringstream os;
                 os << what << ": failed to start sc.exe. sysError=" << rr.sysError;
                 *error = os.str();
-                //---Логируем ошибку запуска с системным кодом ошибки
+                //---Логгируем ошибку запуска с системным кодом ошибки
                 LOG(ERROR) << "Failed to start sc.exe. sysError=" << rr.sysError;
             }
             return false;
@@ -69,7 +69,7 @@ namespace svcinst {
                 std::ostringstream os;
                 os << what << ": sc.exe exitCode=" << rr.exitCode;
                 *error = os.str();
-                //---Логируем код завершения sc.exe
+                //---Логгируем код завершения sc.exe
                 LOG(ERROR) << "sc.exe exitCode = " << rr.exitCode;
             }
             return false;
@@ -103,7 +103,7 @@ namespace svcinst {
                 std::ostringstream os;
                 os << "sc query: failed to start sc.exe. sysError=" << rr.sysError;
                 *error = os.str();
-                //---Логируем код завершения sc.exe
+                //---Логгируем код завершения sc.exe
                 LOG(ERROR) << "sc query: failed to start sc.exe. sysError=" << rr.sysError;
             }
             return false;
@@ -130,6 +130,7 @@ namespace svcinst {
             std::ostringstream os;
             os << "sc query: unexpected exitCode=" << rr.exitCode;
             *error = os.str();
+            //---Логгируем код неизвестной ошибки
             LOG(ERROR) << "sc query: unexpected exitCode=" << rr.exitCode;
         }
         return false;
@@ -210,93 +211,204 @@ namespace svcinst {
     //------------------------------------------------------------
     class BackendWinSc final : public IServiceBackend {
     public:
-		//---Установка или обновление службы
+        //------------------------------------------------------------
+		//  Установка или обновление службы
+        //------------------------------------------------------------
         bool installOrUpdate(const ServiceSpec& spec, std::string* error) override
         {
-            if (spec.name.empty()) { if (error) *error = "installOrUpdate: empty service name"; return false; }
-            if (spec.exeAbs.empty()) { if (error) *error = "installOrUpdate: empty exeAbs"; return false; }
-
+            //---Проверка на пустое имя службы
+			if (spec.name.empty())
+			{
+				if (error)
+				{
+					*error = "installOrUpdate: empty service name"; 
+                    LOG(ERROR) << "installOrUpdate: empty service name";
+				}
+                return false;
+			}
+            //---Проверка на пустой путь к исполняемому файлу
+            if (spec.exeAbs.empty()) 
+            { 
+                if (error)
+                {
+                    *error = "installOrUpdate: empty exeAbs";
+                    LOG(ERROR) << "installOrUpdate: empty exeAbs";
+                }
+                return false;
+            }
+            //---Проверяем, существует ли уже служба с таким именем
             bool exists = false;
             if (!serviceExists(spec.name, exists, error)) return false;
 
-            const std::string startType = spec.autostart ? "auto" : "demand";
+            //---Подготавливаем параметры для sc.exe
+            // 
+            //---auto - автозапуск, demand - вручную
+            const std::string startType = spec.autostart ? "auto" : "demand";   
+            //---Формируем значение binPath
             const std::string binValue = buildBinPathValue(spec);
 
+            //---Если службы не существует - создаем новую
             if (!exists)
             {
-                // sc create "<name>" binPath= "<value>" start= auto
-                if (!runSc({ "create", spec.name,
-                             "binPath=", binValue,
-                             "start=", startType },
-                    { 0, (int)ERROR_SERVICE_EXISTS }, error, "sc create"))
-                    return false;
-            }
-
-            // всегда config (обновить binPath/start)
-            if (!runSc({ "config", spec.name,
-                         "binPath=", binValue,
-                         "start=", startType },
-                { 0 }, error, "sc config"))
-                return false;
-
-            // description (optional)
-            if (!spec.description.empty())
+                //---Команда создания службы: sc create "<name>" binPath= "<value>" start= auto
+                if (!runSc(
+                    { 
+                        "create", spec.name,            // Команда create и имя службы
+                        "binPath=", binValue,           // binPath= "<путь к exe> [аргументы]"
+                        "start=", startType             // start= auto/demand
+                    },
+                    { 0, (int)ERROR_SERVICE_EXISTS },   // Допустимые коды завершения: 0 или 1073
+                    error,                              // Указатель для сообщения об ошибке
+                    "sc create"                         // Описание операции для логгирования
+                ))                       
+                {
+                    return false;   // Если создание не удалось
+                }   
+            }   // Конец блока создания новой службы
+            
+            //---Всегда выполняем config - обновляем параметры существующей службы
+            //   Даже если только что создали службу, настраиваем её параметры
+            //   всегда config (обновить binPath/start)
+            if (!runSc(
+                { 
+                    "config", spec.name,               // Команда config и имя службы 
+                    "binPath=", binValue,              // Обновляем путь к исполняемому файлу
+                    "start=", startType                // Обновляем тип запуска
+                },
+                { 0 },                                 // Только код 0 считается успехом
+                error,                                 // Указатель для ошибки
+                "sc config"                            // Описание операции
+            ))
             {
-                if (!runSc({ "description", spec.name, spec.description },
-                    { 0 }, error, "sc description"))
-                    return false;
+                return false;   // Если настройка не удалась
             }
-
-            // recovery
-            if (!runSc({ "failure", spec.name,
-                         "reset=", "10",
-                         "actions=", "restart/2000/restart/2000/restart/2000" },
-                { 0 }, error, "sc failure"))
-                return false;
-
-            if (!runSc({ "failureflag", spec.name, "1" },
-                { 0 }, error, "sc failureflag"))
-                return false;
-
-            return true;
+             
+			//---Установка описания службы (опционально)
+			if (!spec.description.empty())  // Если описание не пустое
+			{
+				if (!runSc(
+					{
+						"description", spec.name, spec.description          // Команда description и имя службы
+					},
+					{ 0 },                                                  // Только код 0
+					error,                                                  // Указатель для ошибки
+					"sc description"                                        // Описание операции
+				))
+				{
+					return false;   // Если установка описания не удалась
+				}
+			}
+            //---Настройка восстановления службы при сбоях
+            //   reset= 10 - сбрасывать счетчик сбоев через 10 секунд
+            //   actions= restart/2000/restart/2000/restart/2000 - три попытки перезапуска с интервалом 2 сек
+			if (!runSc(
+				{
+					"failure", spec.name,                                   // Команда failure и имя службы
+					"reset=", "10",                                         // Сброс счетчика через 10 сек
+					"actions=", "restart/2000/restart/2000/restart/2000"    // 3 перезапуска
+				},
+				{ 0 },                                                      // Только код 0
+				error,                                                      // Указатель для ошибки
+				"sc failure"                                                // Описание операции
+			))
+			{
+				return false;   // Если настройка восстановления не удалась
+			}
+             
+			//---Включение флага восстановления службы
+			//   failureflag 1 - включаем обработку сбоев
+			if (!runSc(
+				{
+					"failureflag", spec.name, "1"                           // Команда failureflag и имя службы
+				},
+				{ 0 },                                                      // Только код 0
+				error,                                                      // Указатель для ошибки
+				"sc failureflag"                                            // Описание операции
+			))
+			{
+				return false;   // Если включение флага не удалось
+			}
+            return true;    // Все операции успешно выполнены
         }
-		//---Удаление службы
+        //------------------------------------------------------------
+		//  Удаление службы
+        //------------------------------------------------------------
         bool uninstall(const std::string& name, bool stopFirst, std::string* error) override
         {
-            if (name.empty()) { if (error) *error = "uninstall: empty service name"; return false; }
-
+            //---Проверка на пустое имя службы
+            if (name.empty()) 
+            { 
+                if (error) 
+                {
+                    *error = "uninstall: empty service name"; 
+                    LOG(ERROR) << "uninstall: empty service name";
+                    return false;
+                }
+            }
+            //---Проверяем существование службы
             bool exists = false;
-            if (!serviceExists(name, exists, error)) return false;
-            if (!exists) return true; // идемпотентно
+            if (!serviceExists(name, exists, error)) return false; // Ошибка проверки
+            
+            //---Если служба не существует - возвращаем true (идемпотентность)
+            if (!exists) return true; // идемпотентно - можно вызывать многократно
 
+            //---Если нужно остановить службу перед удалением
             if (stopFirst)
             {
-                // 1062 = уже остановлена — это ок
-                if (!runSc({ "stop", name },
-                    { 0, (int)ERROR_SERVICE_NOT_ACTIVE }, error, "sc stop"))
-                    return false;
+                // Команда остановки службы
+                // ERROR_SERVICE_NOT_ACTIVE (1062) - "служба не запущена", считается допустимым
+                if (!runSc(
+                    { "stop", name },                           // Команда stop и имя службы
+                    { 0, (int)ERROR_SERVICE_NOT_ACTIVE },       // Допустимые коды: 0 или 1062
+                    error,                                      // Указатель для ошибки
+                    "sc stop"                                   // Описание операции
+                ))
+                {
+                    return false;   // Если остановка не удалась
+                }
             }
-
-            // 1072 = помечена на удаление — тоже ок
-            if (!runSc({ "delete", name },
-                { 0, (int)ERROR_SERVICE_MARKED_FOR_DELETE }, error, "sc delete"))
-                return false;
-
-            return true;
+            //---Удаление службы
+            //   ERROR_SERVICE_MARKED_FOR_DELETE (1072) - "служба помечена на удаление", допустимо
+            if (!runSc(
+                { "delete", name },                             // Команда delete и имя службы
+                { 0, (int)ERROR_SERVICE_MARKED_FOR_DELETE },    // Допустимые коды: 0 или 1072
+                error,                                          // Указатель для ошибки
+                "sc delete"                                     // Описание операции
+            ))
+            {
+                return false;   // Если удаление не удалось
+            }
+            return true;    // Удаление успешно
         }
-		//---Запуск службы
-        bool start(const std::string& name, std::string* error) override
-        {
-            // 1056 = already running => ok
-            return runSc({ "start", name }, { 0, (int)ERROR_SERVICE_ALREADY_RUNNING }, error, "sc start");
-        }
-		//---Остановка службы
+        //------------------------------------------------------------
+        //  Запуск службы
+        //------------------------------------------------------------
+		bool start(const std::string& name, std::string* error) override
+		{
+			//---Команда запуска службы
+			//   ERROR_SERVICE_ALREADY_RUNNING (1056) - "служба уже запущена", допустимо
+			return runSc(
+				{ "start", name },                              // Команда start и имя службы
+				{ 0, (int)ERROR_SERVICE_ALREADY_RUNNING },      // Допустимые коды: 0 или 1056
+				error,                                          // Указатель для ошибки                                
+				"sc start"                                      // Описание операции
+			);
+		}
+        //------------------------------------------------------------
+        //  Остановка службы
+        //------------------------------------------------------------
         bool stop(const std::string& name, std::string* error) override
-        {
-            return runSc({ "stop", name }, { 0, (int)ERROR_SERVICE_NOT_ACTIVE }, error, "sc stop");
-        }
+		{
+			//---Команда остановки службы
+			//  ERROR_SERVICE_NOT_ACTIVE (1062) - "служба не запущена", допустимо
+			return runSc(
+				{ "stop", name },                               // Команда stop и имя службы
+				{ 0, (int)ERROR_SERVICE_NOT_ACTIVE },           // Допустимые коды: 0 или 1062
+				error,                                          // Указатель для ошибки 
+				"sc stop"                                       // Описание операции
+			);
+		}
     };
-
 } // namespace svcinst
 
 namespace svcinst::platform {

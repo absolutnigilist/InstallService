@@ -129,7 +129,10 @@ namespace svcinst {
 			spec.runNow = opt.runNow;	//	Запустить службу сразу после установки
 
 			//---Установка или обновление службы c заданной спецификацией
-			if (!backend->installOrUpdate(spec, &err)) return fail(err.empty() ? "installOrUpdate failed." : err);
+			if (!backend->installOrUpdate(spec, &err))
+			{
+				return fail(err.empty() ? "installOrUpdate failed." : err);
+			}
 
 			if (spec.runNow)
 			{
@@ -140,7 +143,10 @@ namespace svcinst {
 		//---Если команда — удаление службы
 		if (opt.cmd == Command::Uninstall)
 		{
-			if (!backend->uninstall(opt.name, opt.stopFirst, &err)) return fail(err.empty() ? "uninstall failed." : err);
+			if (!backend->uninstall(opt.name, opt.stopFirst, &err))
+			{
+				return fail(err.empty() ? "uninstall failed." : err);
+			}
 
 			cleanupAfterUninstall(opt);
 			return 0;
@@ -148,16 +154,21 @@ namespace svcinst {
 		//---Если команда — запуск службы
 		if (opt.cmd == Command::Start)
 		{
-			if (!backend->start(opt.name, &err)) return fail(err.empty() ? "start failed." : err);
+			if (!backend->start(opt.name, &err))
+			{
+				return fail(err.empty() ? "start failed." : err);
+			}
 			return 0;
 		}
 		//---Если команда — остановка службы
 		if (opt.cmd == Command::Stop)
 		{
-			if (!backend->stop(opt.name, &err)) return fail(err.empty() ? "stop failed." : err);
+			if (!backend->stop(opt.name, &err))
+			{
+				return fail(err.empty() ? "stop failed." : err);
+			}
 			return 0;
 		}
-		
 		return 2;
 	}
 }; //---namespace svcinst

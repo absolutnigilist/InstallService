@@ -39,7 +39,9 @@ namespace svcinst {
 					std::string delErr;
 					(void)svcinst::platform::removeDataRoot(svcinst::fs::path(opt.dataRoot), &delErr);
 					if (!delErr.empty())
+					{
 						LOG(WARNING) << "removeDataRoot: " << delErr;
+					}
 				}
 				else
 				{
@@ -55,7 +57,9 @@ namespace svcinst {
 				std::string delErr;
 				(void)svcinst::platform::removeInstallDir(installDir, &delErr, opt.fromInno);
 				if (!delErr.empty())
+				{
 					LOG(WARNING) << "removeInstallDir: " << delErr;
+				}
 			}
 		}
 	} // namespace

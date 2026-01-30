@@ -14,7 +14,7 @@ namespace svcinst::platform {
 
     namespace fs = std::filesystem;
     //------------------------------------------------------------
-    //  Safety: �� ���� ������ "�������" ���� ���� C:\ ��� �����
+    //  Safety: не дать снести "опасные" пути типа C:\ или корня
     //------------------------------------------------------------
     static bool isDangerousPath(const fs::path& p)
     {
@@ -34,7 +34,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  ����� ReadOnly/Hidden/System (������ remove_all �� Win)
+    //  Снять ReadOnly/Hidden/System (часто мешают remove_all на Win)
     //------------------------------------------------------------
     static void makeNormalAttributes(const fs::path& p)
     {
@@ -70,7 +70,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  ������� ������� �����
+    //  Попытка удалить сразу
     //------------------------------------------------------------
     static bool removeTreeNow(const fs::path& dir, std::string* error)
     {
@@ -96,7 +96,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  ���������� ��������: cmd.exe � ����
+    //  Отложенное удаление: cmd.exe в фоне
     //------------------------------------------------------------
     static fs::path cmdExePath()
     {
@@ -158,7 +158,7 @@ namespace svcinst::platform {
     }
 
     //------------------------------------------------------------
-    //  ��������� �������
+    //  Публичные функции из Platform.hpp
     //------------------------------------------------------------
     bool removeInstallDir(const fs::path& installDir, std::string* error,bool fromInno)
     {

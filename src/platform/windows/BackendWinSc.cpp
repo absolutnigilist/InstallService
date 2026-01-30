@@ -7,12 +7,15 @@
 #include <filesystem>
 #include <memory>
 #include <sstream>
+#include <glog/logging.h>
+
 
 namespace svcinst {
 
     namespace fs = std::filesystem;
-
-	//--- Путь к sc.exe
+    //------------------------------------------------------------
+	//  Путь к sc.exe
+    //------------------------------------------------------------
     static fs::path scExePath()
     {
         wchar_t sysDir[MAX_PATH]{};
@@ -20,33 +23,45 @@ namespace svcinst {
         if (n == 0 || n >= MAX_PATH) return fs::path(L"sc.exe");
         return fs::path(sysDir) / L"sc.exe";
     }
-	//--- Проверка, что код выхода входит в список допустимых
+    //------------------------------------------------------------
+	//  Проверка, что код выхода входит в список допустимых
+    //------------------------------------------------------------
     static bool scOkExit(int code, std::initializer_list<int> ok)
     {
         for (int v : ok) if (code == v) return true;
         return false;
     }
-
-    //---Обёртка над sc.exe
-    static bool runSc(const std::vector<std::string>& args,
-        std::initializer_list<int> okExitCodes,
-        std::string* error,
-        const char* what)
+    //------------------------------------------------------------
+    //  Обёртка над sc.exe
+    //------------------------------------------------------------
+    static bool runSc(
+        const std::vector<std::string>& args,       //  Аргументы командной строки для sc.exe
+        std::initializer_list<int> okExitCodes,     //  Список допустимых кодов завершения
+        std::string* error,                         //  Указатель для возврата ошибки
+        const char* what)                           //  Описание операции для логирования
     {
         process::RunResult rr;
-        const bool started = process::run(scExePath(), args, rr, process::RunOptions{ .hideWindow = true });
-
+        //---Запускаем sc.exe с переданными аргументами и скрытым окном
+        const bool started = process::run(
+            scExePath(),                                // Получаем путь к sc.exe
+            args,                                       // Аргументы командной строки
+            rr,                                         // Результат выполнения
+            process::RunOptions{ .hideWindow = true }   // Окно скрыто
+        );
+        //---Проверяем, удалось ли запустить процесс
         if (!started || !rr.started)
         {
-            if (error)
+            if (error)  // Если передан указатель для ошибки
             {
                 std::ostringstream os;
                 os << what << ": failed to start sc.exe. sysError=" << rr.sysError;
                 *error = os.str();
+                //---Логируем ошибку запуска с системным кодом ошибки
+                LOG(ERROR) << "Failed to start sc.exe. sysError=" << rr.sysError;
             }
             return false;
         }
-
+        //---Проверяем код завершения sc.exe
         if (!scOkExit(rr.exitCode, okExitCodes))
         {
             if (error)
@@ -54,68 +69,135 @@ namespace svcinst {
                 std::ostringstream os;
                 os << what << ": sc.exe exitCode=" << rr.exitCode;
                 *error = os.str();
+                //---Логируем код завершения sc.exe
+                LOG(ERROR) << "sc.exe exitCode = " << rr.exitCode;
             }
             return false;
         }
 
         return true;
     }
-	//---Проверка существования службы
-    static bool serviceExists(const std::string& name, bool& exists, std::string* error)
+    //------------------------------------------------------------
+	//  Проверка существования службы
+    //------------------------------------------------------------
+    static bool serviceExists(
+        const std::string& name,    // Имя службы для проверки
+        bool& exists,               // Выходной параметр: существует ли служба
+        std::string* error          // Указатель для возврата сообщения об ошибке
+    )
     {
         process::RunResult rr;
-        const bool started = process::run(scExePath(), { "query", name }, rr, process::RunOptions{ .hideWindow = true });
+       
+        //---Запускаем команду sc.exe query <имя_службы> для проверки службы
+        const bool started = process::run(
+            scExePath(),                                // Получаем полный путь к sc.exe
+            { "query", name },                          // Аргументы: команда query и имя службы
+            rr,                                         // Куда записать результат выполнения
+            process::RunOptions{ .hideWindow = true }   // Окно скрыто
+        );
+        //---Проверяем, удалось ли запустить процесс sc.exe
         if (!started || !rr.started)
         {
-            if (error)
+            if (error) // Если передан указатель для ошибки
             {
                 std::ostringstream os;
                 os << "sc query: failed to start sc.exe. sysError=" << rr.sysError;
                 *error = os.str();
+                //---Логируем код завершения sc.exe
+                LOG(ERROR) << "sc query: failed to start sc.exe. sysError=" << rr.sysError;
             }
             return false;
         }
-
-        if (rr.exitCode == 0) { exists = true; return true; }
-        if (rr.exitCode == (int)ERROR_SERVICE_DOES_NOT_EXIST) { exists = false; return true; }
-
+		//---Проверяем код завершения sc.exe
+        // 
+        //---Код 0 означает успешное выполнение - служба существует
+		if (rr.exitCode == 0)
+		{
+			exists = true;  // Устанавливаем выходной параметр exists = true
+			return true;
+		}
+        //---Проверяем специфический код ошибки "служба не существует"
+        //   ERROR_SERVICE_DOES_NOT_EXIST - системная константа Windows (обычно 1060)
+		if (rr.exitCode == (int)ERROR_SERVICE_DOES_NOT_EXIST)
+		{
+			exists = false; // Устанавливаем выходной параметр exists = false
+			return true;
+		}
+        //---Если код завершения не 0 и не ERROR_SERVICE_DOES_NOT_EXIST,
+        //   неизвестная ошибка
         if (error)
         {
             std::ostringstream os;
             os << "sc query: unexpected exitCode=" << rr.exitCode;
             *error = os.str();
+            LOG(ERROR) << "sc query: unexpected exitCode=" << rr.exitCode;
         }
         return false;
     }
-    //---
+    //------------------------------------------------------------
+    //  Конвертация строки из UTF-16 (широкой строки Windows) в UTF-8
+    //------------------------------------------------------------
     static std::string wideToUtf8(std::wstring_view w)
-    {
-        if (w.empty()) return {};
+	{
+		//---Если входная строка пустая, сразу возвращаем пустую строку UTF-8
+		if (w.empty()) return {};
 
-        int n = WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(),
-            nullptr, 0, nullptr, nullptr);
-        if (n <= 0) return {};
+		//---WideCharToMultiByte с пустым выходным буфером, определение необходимого размера буфера
+		int n = WideCharToMultiByte(
+			CP_UTF8,
+			0,
+			w.data(),
+			(int)w.size(),
+			nullptr,
+			0,
+			nullptr,
+			nullptr
+		);
 
-        std::string s((size_t)n, '\0');
-        WideCharToMultiByte(CP_UTF8, 0, w.data(), (int)w.size(),
-            s.data(), n, nullptr, nullptr);
-        return s;
+		//---Если ошибка или размер 0, возвращаем пустую строку
+		if (n <= 0) return {};
+
+		//---Создаем строку UTF-8 нужного размера, заполненную нулевыми символами
+		std::string s((size_t)n, '\0');
+
+		//---WideCharToMultiByte: фактическая конвертация
+		WideCharToMultiByte(CP_UTF8,
+			0,
+			w.data(),
+			(int)w.size(),
+			s.data(),
+			n,
+			nullptr,
+			nullptr
+		);
+		return s;
     }
-	//---Преобразование fs::path в std::string в кодировке UTF-8
+    //------------------------------------------------------------
+	//  Платформозависимое преобразование 
+    //  fs::path в std::string в кодировке UTF-8
+    //------------------------------------------------------------
     static std::string pathToUtf8(const fs::path& p)
     {
-#ifdef _WIN32
-        return wideToUtf8(p.wstring());
-#else
-        return p.string();
+#ifdef _WIN32    
+        return wideToUtf8(p.wstring()); // ВЕТКА ДЛЯ WINDOWS:
+#else           
+        return p.string();              // ВЕТКА ДЛЯ Linux
 #endif
     }
-
-    //---Значение для binPath: "\"C:\...\app.exe\" <args>"
+    //------------------------------------------------------------
+    //  Построение строки значения BinPath для службы Windows
+    //------------------------------------------------------------
     static std::string buildBinPathValue(const ServiceSpec& spec)
     {
+        //---Получаем путь к исполняемому файлу в кодировке UTF - 8
         std::string exe = pathToUtf8(spec.exeAbs);
+        
+        //---Создаем начальную строку с путем в кавычках
+        //   Кавычки необходимы, если путь содержит пробелы
+        //   Формат: "путь_к_исполняемому_файлу"
         std::string v = "\"" + exe + "\"";
+        
+        //---Проверка наличия и добавление аргументов
         if (!spec.args.empty())
         {
             v += " ";
@@ -123,7 +205,9 @@ namespace svcinst {
         }
         return v;
     }
-	//---Реализация бэкенда установки службы для Windows с использованием sc.exe
+    //------------------------------------------------------------
+	//  Реализация бэкенда установки службы для Windows с использованием sc.exe
+    //------------------------------------------------------------
     class BackendWinSc final : public IServiceBackend {
     public:
 		//---Установка или обновление службы
@@ -216,13 +300,13 @@ namespace svcinst {
 } // namespace svcinst
 
 namespace svcinst::platform {
-	
-    //---Cоздание бэкенда для текущей платформы
+    //------------------------------------------------------------
+    //  Cоздание бэкенда для текущей платформы
+    //------------------------------------------------------------
     std::unique_ptr<IServiceBackend> makeBackend()
     {
         return std::make_unique<svcinst::BackendWinSc>();
     }
-
 } // namespace svcinst::platform
 
 #endif

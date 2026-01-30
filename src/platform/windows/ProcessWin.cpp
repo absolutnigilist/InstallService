@@ -6,8 +6,10 @@
 #include <glog/logging.h>
 
 namespace svcinst::process::detail {
-
-	//--- Преобразование строки UTF-8 в широкую строку (UTF-16) для Windows API
+    //------------------------------------------------------------
+	//  Преобразование строки UTF-8 в широкую строку 
+    //  (UTF-16) для Windows API
+    //------------------------------------------------------------
     static std::wstring utf8ToWide(const std::string& s)
     {
         //---Проверка на пустую строку
@@ -28,8 +30,10 @@ namespace svcinst::process::detail {
         }
         return w;
     }
-
-    //---Корректное quoting аргументов под CreateProcess (правило backslashes+quotes)
+    //------------------------------------------------------------
+    //  Корректное quoting аргументов 
+    //  под CreateProcess (правило backslashes+quotes)
+    //------------------------------------------------------------
     static std::wstring quoteWindowsArg(std::wstring_view arg)
     {
         //---Кавычки нужны если пустой аргумент, есть пробелы, табуляции, переводы строк или кавычки
@@ -75,7 +79,9 @@ namespace svcinst::process::detail {
         out.push_back(L'"');                //  закрывающая кавычка
         return out;
     }
-	//---Построение командной строки для CreateProcess
+    //------------------------------------------------------------
+	//  Построение командной строки для CreateProcess
+    //------------------------------------------------------------
     static std::wstring buildCommandLine(const fs::path& exe, const std::vector<std::string>& args)
     {
         std::wstring cmd = quoteWindowsArg(exe.wstring());
@@ -86,7 +92,9 @@ namespace svcinst::process::detail {
         }
         return cmd;
     }
-	//---Платформенно-специфичная реализация запуска процесса для Windows
+    //------------------------------------------------------------
+	//  Платформенно-специфичная реализация запуска процесса для Windows
+    //------------------------------------------------------------
     bool runPlatform(const fs::path& exe, const std::vector<std::string>& args, RunResult& out, const RunOptions& opt)
     {
         out = {};
@@ -172,6 +180,5 @@ namespace svcinst::process::detail {
         out.exitCode = (int)code;
         return true;
     }
-
 } // namespace svcinst::process::detail
 #endif

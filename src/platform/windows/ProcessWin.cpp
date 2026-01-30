@@ -7,20 +7,20 @@
 
 namespace svcinst::process::detail {
 
-	//--- Преобразование строки UTF-8 в широкую строку (UTF-16) для Windows API
+	//--- РџСЂРµРѕР±СЂР°Р·РѕРІР°РЅРёРµ СЃС‚СЂРѕРєРё UTF-8 РІ С€РёСЂРѕРєСѓСЋ СЃС‚СЂРѕРєСѓ (UTF-16) РґР»СЏ Windows API
     static std::wstring utf8ToWide(const std::string& s)
     {
-        //---Проверка на пустую строку
+        //---РџСЂРѕРІРµСЂРєР° РЅР° РїСѓСЃС‚СѓСЋ СЃС‚СЂРѕРєСѓ
         if (s.empty()) return {};
-        //---Выходной буфер пустой. получаем требуемое число wide-символов
+        //---Р’С‹С…РѕРґРЅРѕР№ Р±СѓС„РµСЂ РїСѓСЃС‚РѕР№. РїРѕР»СѓС‡Р°РµРј С‚СЂРµР±СѓРµРјРѕРµ С‡РёСЃР»Рѕ wide-СЃРёРјРІРѕР»РѕРІ
         int n = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.c_str(), (int)s.size(), nullptr, 0);
         if (n == 0)
         {
             LOG(ERROR) << "Failed to get required buffer size for UTF - 8 to wide conversion";
         }
-        //---Инициализируем широкую строку широкими символами \0
+        //---РРЅРёС†РёР°Р»РёР·РёСЂСѓРµРј С€РёСЂРѕРєСѓСЋ СЃС‚СЂРѕРєСѓ С€РёСЂРѕРєРёРјРё СЃРёРјРІРѕР»Р°РјРё \0
         std::wstring w((size_t)n, L'\0');
-        //---Пишем широкие символы
+        //---РџРёС€РµРј С€РёСЂРѕРєРёРµ СЃРёРјРІРѕР»С‹
         int written = MultiByteToWideChar(CP_UTF8, MB_ERR_INVALID_CHARS, s.c_str(), (int)s.size(), w.data(), n);
         if (written == 0)
         {
@@ -29,53 +29,53 @@ namespace svcinst::process::detail {
         return w;
     }
 
-    //---Корректное quoting аргументов под CreateProcess (правило backslashes+quotes)
+    //---РљРѕСЂСЂРµРєС‚РЅРѕРµ quoting Р°СЂРіСѓРјРµРЅС‚РѕРІ РїРѕРґ CreateProcess (РїСЂР°РІРёР»Рѕ backslashes+quotes)
     static std::wstring quoteWindowsArg(std::wstring_view arg)
     {
-        //---Кавычки нужны если пустой аргумент, есть пробелы, табуляции, переводы строк или кавычки
+        //---РљР°РІС‹С‡РєРё РЅСѓР¶РЅС‹ РµСЃР»Рё РїСѓСЃС‚РѕР№ Р°СЂРіСѓРјРµРЅС‚, РµСЃС‚СЊ РїСЂРѕР±РµР»С‹, С‚Р°Р±СѓР»СЏС†РёРё, РїРµСЂРµРІРѕРґС‹ СЃС‚СЂРѕРє РёР»Рё РєР°РІС‹С‡РєРё
         const bool needQuotes =
             arg.empty() || (arg.find_first_of(L" \t\n\v\"") != std::wstring_view::npos);
 
-        //---Если кавычки не нужны, возвращаем строку как есть
+        //---Р•СЃР»Рё РєР°РІС‹С‡РєРё РЅРµ РЅСѓР¶РЅС‹, РІРѕР·РІСЂР°С‰Р°РµРј СЃС‚СЂРѕРєСѓ РєР°Рє РµСЃС‚СЊ
         if (!needQuotes) return std::wstring(arg);
 
-        //---Резервируем память (аргумент + 2 кавчки)
+        //---Р РµР·РµСЂРІРёСЂСѓРµРј РїР°РјСЏС‚СЊ (Р°СЂРіСѓРјРµРЅС‚ + 2 РєР°РІС‡РєРё)
         std::wstring out;
         out.reserve(arg.size() + 2);
-        out.push_back(L'"');    // открывающая кавычка
+        out.push_back(L'"');    // РѕС‚РєСЂС‹РІР°СЋС‰Р°СЏ РєР°РІС‹С‡РєР°
 
-        //---Счетчик последовательных обратных слешей
+        //---РЎС‡РµС‚С‡РёРє РїРѕСЃР»РµРґРѕРІР°С‚РµР»СЊРЅС‹С… РѕР±СЂР°С‚РЅС‹С… СЃР»РµС€РµР№
         std::size_t bsCount = 0;
         for (wchar_t ch : arg)
         {
-            //---Если символ обратный слеш
+            //---Р•СЃР»Рё СЃРёРјРІРѕР» РѕР±СЂР°С‚РЅС‹Р№ СЃР»РµС€
             if (ch == L'\\')
             {
-                ++bsCount;                  //  увеличиваем счетчик обратных слешей
-                out.push_back(L'\\');       // добавляем слеш в выходную строку
+                ++bsCount;                  //  СѓРІРµР»РёС‡РёРІР°РµРј СЃС‡РµС‚С‡РёРє РѕР±СЂР°С‚РЅС‹С… СЃР»РµС€РµР№
+                out.push_back(L'\\');       // РґРѕР±Р°РІР»СЏРµРј СЃР»РµС€ РІ РІС‹С…РѕРґРЅСѓСЋ СЃС‚СЂРѕРєСѓ
                 continue;
             }
-            //---Если символ кавычка
+            //---Р•СЃР»Рё СЃРёРјРІРѕР» РєР°РІС‹С‡РєР°
             if (ch == L'"')
             {
-                //--удвоить backslash'и перед кавычкой и экранировать кавычку
-                out.append(bsCount, L'\\'); //  удваиваем все слеши перед кавычкой
-                bsCount = 0;                //  сбрасываем счетчик
-                out.push_back(L'\\');       //  добавляем экранирущий слеш
-                out.push_back(L'"');        //  добавляем саму кавычку
+                //--СѓРґРІРѕРёС‚СЊ backslash'Рё РїРµСЂРµРґ РєР°РІС‹С‡РєРѕР№ Рё СЌРєСЂР°РЅРёСЂРѕРІР°С‚СЊ РєР°РІС‹С‡РєСѓ
+                out.append(bsCount, L'\\'); //  СѓРґРІР°РёРІР°РµРј РІСЃРµ СЃР»РµС€Рё РїРµСЂРµРґ РєР°РІС‹С‡РєРѕР№
+                bsCount = 0;                //  СЃР±СЂР°СЃС‹РІР°РµРј СЃС‡РµС‚С‡РёРє
+                out.push_back(L'\\');       //  РґРѕР±Р°РІР»СЏРµРј СЌРєСЂР°РЅРёСЂСѓС‰РёР№ СЃР»РµС€
+                out.push_back(L'"');        //  РґРѕР±Р°РІР»СЏРµРј СЃР°РјСѓ РєР°РІС‹С‡РєСѓ
                 continue;
             }
-            //---Любой другой символ
-            bsCount = 0;                    //  сбрасываем счетчик слешей
-            out.push_back(ch);              //  добавляем символ как есть
+            //---Р›СЋР±РѕР№ РґСЂСѓРіРѕР№ СЃРёРјРІРѕР»
+            bsCount = 0;                    //  СЃР±СЂР°СЃС‹РІР°РµРј СЃС‡РµС‚С‡РёРє СЃР»РµС€РµР№
+            out.push_back(ch);              //  РґРѕР±Р°РІР»СЏРµРј СЃРёРјРІРѕР» РєР°Рє РµСЃС‚СЊ
         }
 
-        //---Закрывабщая кавычка 
-        out.append(bsCount, L'\\');         //  удваиваем слеши перед закрывающей кавычкой
-        out.push_back(L'"');                //  закрывающая кавычка
+        //---Р—Р°РєСЂС‹РІР°Р±С‰Р°СЏ РєР°РІС‹С‡РєР° 
+        out.append(bsCount, L'\\');         //  СѓРґРІР°РёРІР°РµРј СЃР»РµС€Рё РїРµСЂРµРґ Р·Р°РєСЂС‹РІР°СЋС‰РµР№ РєР°РІС‹С‡РєРѕР№
+        out.push_back(L'"');                //  Р·Р°РєСЂС‹РІР°СЋС‰Р°СЏ РєР°РІС‹С‡РєР°
         return out;
     }
-	//---Построение командной строки для CreateProcess
+	//---РџРѕСЃС‚СЂРѕРµРЅРёРµ РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё РґР»СЏ CreateProcess
     static std::wstring buildCommandLine(const fs::path& exe, const std::vector<std::string>& args)
     {
         std::wstring cmd = quoteWindowsArg(exe.wstring());
@@ -86,12 +86,12 @@ namespace svcinst::process::detail {
         }
         return cmd;
     }
-	//---Платформенно-специфичная реализация запуска процесса для Windows
+	//---РџР»Р°С‚С„РѕСЂРјРµРЅРЅРѕ-СЃРїРµС†РёС„РёС‡РЅР°СЏ СЂРµР°Р»РёР·Р°С†РёСЏ Р·Р°РїСѓСЃРєР° РїСЂРѕС†РµСЃСЃР° РґР»СЏ Windows
     bool runPlatform(const fs::path& exe, const std::vector<std::string>& args, RunResult& out, const RunOptions& opt)
     {
         out = {};
 
-        //---Собираем командную строку из пути к исполняемому файлу и аргументов
+        //---РЎРѕР±РёСЂР°РµРј РєРѕРјР°РЅРґРЅСѓСЋ СЃС‚СЂРѕРєСѓ РёР· РїСѓС‚Рё Рє РёСЃРїРѕР»РЅСЏРµРјРѕРјСѓ С„Р°Р№Р»Сѓ Рё Р°СЂРіСѓРјРµРЅС‚РѕРІ
         const std::wstring cmdLine = buildCommandLine(exe, args);
 
         STARTUPINFOW si{};
@@ -99,76 +99,76 @@ namespace svcinst::process::detail {
 
         PROCESS_INFORMATION pi{};
 
-        //---Подготовка буфера командной строки
+        //---РџРѕРґРіРѕС‚РѕРІРєР° Р±СѓС„РµСЂР° РєРѕРјР°РЅРґРЅРѕР№ СЃС‚СЂРѕРєРё
         std::vector<wchar_t> buf(cmdLine.begin(), cmdLine.end());
         buf.push_back(L'\0');
 
-        //---Настройка параметров запуска
-        const DWORD flags = opt.hideWindow ? CREATE_NO_WINDOW : 0;                          // опция без окна консоли
-        const std::wstring cwdW = opt.workingDir.empty() ? L"" : opt.workingDir.wstring();  // рабочая директория ->wide-строка
+        //---РќР°СЃС‚СЂРѕР№РєР° РїР°СЂР°РјРµС‚СЂРѕРІ Р·Р°РїСѓСЃРєР°
+        const DWORD flags = opt.hideWindow ? CREATE_NO_WINDOW : 0;                          // РѕРїС†РёСЏ Р±РµР· РѕРєРЅР° РєРѕРЅСЃРѕР»Рё
+        const std::wstring cwdW = opt.workingDir.empty() ? L"" : opt.workingDir.wstring();  // СЂР°Р±РѕС‡Р°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ ->wide-СЃС‚СЂРѕРєР°
         const wchar_t* cwdPtr = opt.workingDir.empty() ? nullptr : cwdW.c_str();
 
-        //---Создание процесса
+        //---РЎРѕР·РґР°РЅРёРµ РїСЂРѕС†РµСЃСЃР°
         BOOL ok = CreateProcessW(
-            exe.wstring().c_str(), // Имя исполняемого файла
-            buf.data(),            // Командная строка (mutable)
-            nullptr, nullptr,      // Атрибуты бещпасности
-            FALSE,                 // Без наследования дескрипторов
-            flags,                 // Флаг создания окна консоли
-            nullptr,               // Переменные окружения(наследовать от родителя)
-            cwdPtr,                // Рабочая директория(nullptr = текущая директория)
-            &si,                   // Информауия о запускаемом процессе
-            &pi                    // Заполнится при успехе
+            exe.wstring().c_str(), // РРјСЏ РёСЃРїРѕР»РЅСЏРµРјРѕРіРѕ С„Р°Р№Р»Р°
+            buf.data(),            // РљРѕРјР°РЅРґРЅР°СЏ СЃС‚СЂРѕРєР° (mutable)
+            nullptr, nullptr,      // РђС‚СЂРёР±СѓС‚С‹ Р±РµС‰РїР°СЃРЅРѕСЃС‚Рё
+            FALSE,                 // Р‘РµР· РЅР°СЃР»РµРґРѕРІР°РЅРёСЏ РґРµСЃРєСЂРёРїС‚РѕСЂРѕРІ
+            flags,                 // Р¤Р»Р°Рі СЃРѕР·РґР°РЅРёСЏ РѕРєРЅР° РєРѕРЅСЃРѕР»Рё
+            nullptr,               // РџРµСЂРµРјРµРЅРЅС‹Рµ РѕРєСЂСѓР¶РµРЅРёСЏ(РЅР°СЃР»РµРґРѕРІР°С‚СЊ РѕС‚ СЂРѕРґРёС‚РµР»СЏ)
+            cwdPtr,                // Р Р°Р±РѕС‡Р°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ(nullptr = С‚РµРєСѓС‰Р°СЏ РґРёСЂРµРєС‚РѕСЂРёСЏ)
+            &si,                   // РРЅС„РѕСЂРјР°СѓРёСЏ Рѕ Р·Р°РїСѓСЃРєР°РµРјРѕРј РїСЂРѕС†РµСЃСЃРµ
+            &pi                    // Р—Р°РїРѕР»РЅРёС‚СЃСЏ РїСЂРё СѓСЃРїРµС…Рµ
         );
 
-        //---Обработка ошибки создания процесса
+        //---РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РєРё СЃРѕР·РґР°РЅРёСЏ РїСЂРѕС†РµСЃСЃР°
         if (!ok)
         {
-            out.started = false;                // Процесс не запущен
-            out.sysError = GetLastError();      // Получаем код системной ошибки
-            out.exitCode = (int)out.sysError;   // Сохраняем код системной ошибки как exitCode
+            out.started = false;                // РџСЂРѕС†РµСЃСЃ РЅРµ Р·Р°РїСѓС‰РµРЅ
+            out.sysError = GetLastError();      // РџРѕР»СѓС‡Р°РµРј РєРѕРґ СЃРёСЃС‚РµРјРЅРѕР№ РѕС€РёР±РєРё
+            out.exitCode = (int)out.sysError;   // РЎРѕС…СЂР°РЅСЏРµРј РєРѕРґ СЃРёСЃС‚РµРјРЅРѕР№ РѕС€РёР±РєРё РєР°Рє exitCode
             LOG(ERROR) << "Failed to create process " << exe << " with error: " << out.sysError;
             return false;
         }
 
-        out.started = true;         // старт успешный
-        CloseHandle(pi.hThread);    // закрываем дексриптор основного потока
+        out.started = true;         // СЃС‚Р°СЂС‚ СѓСЃРїРµС€РЅС‹Р№
+        CloseHandle(pi.hThread);    // Р·Р°РєСЂС‹РІР°РµРј РґРµРєСЃСЂРёРїС‚РѕСЂ РѕСЃРЅРѕРІРЅРѕРіРѕ РїРѕС‚РѕРєР°
 
-        //---Устанавливае таймаут ожидания
+        //---РЈСЃС‚Р°РЅР°РІР»РёРІР°Рµ С‚Р°Р№РјР°СѓС‚ РѕР¶РёРґР°РЅРёСЏ
         const DWORD timeout = (opt.timeoutMs == 0) ? INFINITE : opt.timeoutMs;
-        //---Ожидаем завершения процесса с таймаутом
+        //---РћР¶РёРґР°РµРј Р·Р°РІРµСЂС€РµРЅРёСЏ РїСЂРѕС†РµСЃСЃР° СЃ С‚Р°Р№РјР°СѓС‚РѕРј
         DWORD waitRes = WaitForSingleObject(pi.hProcess, timeout);
-        //---Обработка таймаута
+        //---РћР±СЂР°Р±РѕС‚РєР° С‚Р°Р№РјР°СѓС‚Р°
         if (waitRes == WAIT_TIMEOUT)
         {
-            out.timedOut = true;                    // Процесс превысил лимит времени
-            TerminateProcess(pi.hProcess, 1);       // Принудительно завершаем процесс с кодом
-            WaitForSingleObject(pi.hProcess, 5000); // 5 секунд на завершение
+            out.timedOut = true;                    // РџСЂРѕС†РµСЃСЃ РїСЂРµРІС‹СЃРёР» Р»РёРјРёС‚ РІСЂРµРјРµРЅРё
+            TerminateProcess(pi.hProcess, 1);       // РџСЂРёРЅСѓРґРёС‚РµР»СЊРЅРѕ Р·Р°РІРµСЂС€Р°РµРј РїСЂРѕС†РµСЃСЃ СЃ РєРѕРґРѕРј
+            WaitForSingleObject(pi.hProcess, 5000); // 5 СЃРµРєСѓРЅРґ РЅР° Р·Р°РІРµСЂС€РµРЅРёРµ
         }
-        //---Обработка ошибки ожидания
+        //---РћР±СЂР°Р±РѕС‚РєР° РѕС€РёР±РєРё РѕР¶РёРґР°РЅРёСЏ
         else if (waitRes == WAIT_FAILED)
         {
-            out.sysError = GetLastError();      // Сохраняем код ошибки
-            CloseHandle(pi.hProcess);           // Закрываем дескриптор процесса
-            out.exitCode = (int)out.sysError;   // Сохраняем код ошибки как exitCode
+            out.sysError = GetLastError();      // РЎРѕС…СЂР°РЅСЏРµРј РєРѕРґ РѕС€РёР±РєРё
+            CloseHandle(pi.hProcess);           // Р—Р°РєСЂС‹РІР°РµРј РґРµСЃРєСЂРёРїС‚РѕСЂ РїСЂРѕС†РµСЃСЃР°
+            out.exitCode = (int)out.sysError;   // РЎРѕС…СЂР°РЅСЏРµРј РєРѕРґ РѕС€РёР±РєРё РєР°Рє exitCode
             LOG(ERROR) << "WaitForSingleObject failed for process " << exe << " with error " << out.sysError << " (process handle: " << pi.hProcess << ")"; 
             return false;
         }
-        //---Получение кода завершения процесса
+        //---РџРѕР»СѓС‡РµРЅРёРµ РєРѕРґР° Р·Р°РІРµСЂС€РµРЅРёСЏ РїСЂРѕС†РµСЃСЃР°
         DWORD code = 0;
-        //---Запрашиваем код завершения
+        //---Р—Р°РїСЂР°С€РёРІР°РµРј РєРѕРґ Р·Р°РІРµСЂС€РµРЅРёСЏ
         if (!GetExitCodeProcess(pi.hProcess, &code))
         {
-            out.sysError = GetLastError();      // Если не удалось получить код
-            CloseHandle(pi.hProcess);           // Закрывае дексриптор
-            out.exitCode = (int)out.sysError;   // Сохраняем код ошибки
+            out.sysError = GetLastError();      // Р•СЃР»Рё РЅРµ СѓРґР°Р»РѕСЃСЊ РїРѕР»СѓС‡РёС‚СЊ РєРѕРґ
+            CloseHandle(pi.hProcess);           // Р—Р°РєСЂС‹РІР°Рµ РґРµРєСЃСЂРёРїС‚РѕСЂ
+            out.exitCode = (int)out.sysError;   // РЎРѕС…СЂР°РЅСЏРµРј РєРѕРґ РѕС€РёР±РєРё
             LOG(ERROR) << "Failed to get exit code for process " << exe << " with error " << out.sysError << ". Process may have terminated abnormally.";
             return false;
         }
 
-        //---Закрываем декриптор процесса
+        //---Р—Р°РєСЂС‹РІР°РµРј РґРµРєСЂРёРїС‚РѕСЂ РїСЂРѕС†РµСЃСЃР°
         CloseHandle(pi.hProcess);
-        //---Сохраняем код завершения
+        //---РЎРѕС…СЂР°РЅСЏРµРј РєРѕРґ Р·Р°РІРµСЂС€РµРЅРёСЏ
         out.exitCode = (int)code;
         return true;
     }

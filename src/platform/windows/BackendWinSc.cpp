@@ -333,7 +333,7 @@ namespace svcinst {
         //------------------------------------------------------------
 		//  Удаление службы
         //------------------------------------------------------------
-        bool uninstall(const std::string& name, bool stopFirst, std::string* error) override
+        bool uninstall (const std::string& name, bool stopFirst, std::string* error) override
         {
             //---Проверка на пустое имя службы
             if (name.empty()) 

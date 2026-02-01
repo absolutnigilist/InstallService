@@ -87,7 +87,7 @@ namespace svcinst {
 
 		//---Определение команды
 		const bool install = hasFlag(argc, argv, "--install");
-		const bool unistall = hasFlag(argc, argv, "--uninstall");
+		const bool uninstall = hasFlag(argc, argv, "--uninstall");
 		const bool start = hasFlag(argc, argv, "--start");	
 		const bool stop = hasFlag(argc, argv, "--stop");
 		const bool stopFirst = hasFlag(argc, argv, "--stop-first");
@@ -127,7 +127,7 @@ namespace svcinst {
 		//---Определение команды
 		const int cmdCount =
 			(install ? 1 : 0) +
-			(unistall ? 1 : 0) +
+			(uninstall ? 1 : 0) +
 			(start ? 1 : 0) +
 			(stop ? 1 : 0);
 
@@ -144,7 +144,7 @@ namespace svcinst {
 			return o;
 		}
 		if(install) o.cmd = Command::Install;
-		if(unistall) o.cmd = Command::Uninstall;
+		if(uninstall) o.cmd = Command::Uninstall;
 		if(start) o.cmd = Command::Start;
 		if(stop) o.cmd = Command::Stop;
 	
@@ -168,32 +168,38 @@ namespace svcinst {
 	{
 		os <<
 			"service-installer\n\n"
+			"Usage:\n"
+			"  service-installer <command> [options]\n\n"
 			"Commands (choose exactly one):\n"
-			"  --install     Install or update service\n"
-			"  --uninstall   Uninstall service\n"
-			"  --start       Start service\n"
-			"  --stop        Stop service\n\n"
-			"Options:\n";
+			"  --install        Install or update service\n"
+			"  --uninstall      Uninstall service\n"
+			"  --start          Start service\n"
+			"  --stop           Stop service\n\n"
+			"Common options:\n";
 
-		printOpt(os, "--name=<name>", "Service name (required)");
+		printOpt(os, "--name=<name>", "Service name (required for any command except implicit help)");
+
+		os << "\nInstall/update options:\n";
 		printOpt(os, "--exe=<path>", "Service executable (required for --install)");
-		printOpt(os, "", "If relative: resolved relative to service-installer location.");
-		printOpt(os, "--args=\"...\"", "Optional args passed to the service");
-		printOpt(os, "--desc=\"...\"", "Optional description");
+		printOpt(os, "", "If relative: resolved relative to service-installer location (selfDir).");
+		printOpt(os, "--args=\"...\"", "Optional args passed to the service (appended to binPath on Windows)");
+		printOpt(os, "--desc=\"...\"", "Optional description (defaults to service name if empty/whitespace)");
 		printOpt(os, "--run", "For --install: start right after install");
-		printOpt(os, "--stop", "For --uninstall: stop before uninstall");
-		printOpt(os, "--stop-first", "For --uninstall: stop before uninstall");
-		printOpt(os, "--delete=none|data|install|all", "For --uninstall: cleanup policy (default none)");
-		printOpt(os, "--data-root=<path>", "For --uninstall: path to DataRoot (used with --delete=data|all)");
-		printOpt(os, "--from-inno", "Windows: called from Inno Setup (do not delete install dir here)");
 
+		os << "\nUninstall options:\n";
+		printOpt(os, "--stop-first", "For --uninstall: stop service before uninstall");
+		printOpt(os, "--delete=none|data|install|all", "Cleanup policy after uninstall (default: none)");
+		printOpt(os, "--data-root=<path>", "Required for --delete=data|all (path to DataRoot)");
+		printOpt(os, "--from-inno", "Windows: called from Inno Setup (do not delete install dir here)");
 
 		os <<
 			"\nExamples:\n"
 			"  service-installer --install --name=Valenta --exe=Valenta.exe --run\n"
-			"  service-installer --uninstall --name=Valenta --stop\n"
+			"  service-installer --install --name=Valenta --exe=\"C:\\\\Path With Spaces\\\\Valenta.exe\" --args=\"--config=C:\\\\ProgramData\\\\Valenta\\\\cfg.ini\"\n"
+			"  service-installer --uninstall --name=Valenta\n"
 			"  service-installer --uninstall --name=Valenta --stop-first\n"
 			"  service-installer --uninstall --name=Valenta --stop-first --delete=data --data-root=\"C:\\\\ProgramData\\\\Valenta\"\n"
+			"  service-installer --uninstall --name=Valenta --stop-first --delete=all --data-root=\"C:\\\\ProgramData\\\\Valenta\" --from-inno\n"
 			"  service-installer --start --name=Valenta\n"
 			"  service-installer --stop  --name=Valenta\n";
 	}

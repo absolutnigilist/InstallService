@@ -225,6 +225,10 @@ namespace svcinst {
                 return false;
             }
 
+            //---Проверяем, существовал ли unit-файл до установки/обновления
+            const bool exists = unitFileExists(spec.name);
+            const std::string u = unitName(spec.name);
+
             //--- 1) Создание и запись файла unit в /etc/systemd/system/<name>.service
             if (!writeUnitFile(spec, error))
                 return false;
@@ -234,7 +238,6 @@ namespace svcinst {
                 return false;
 
             //--- 3) Включение/отключение автозапуска
-            const std::string u = unitName(spec.name);
             if (spec.autostart)
             {
                 // Включаем автозапуск
@@ -253,8 +256,18 @@ namespace svcinst {
             //--- 4) Немедленный запуск (или перезапуск, если уже запущен)
             if (spec.runNow)
             {
-                if (!runSystemctl({ "restart", u }, { 0 }, error, "systemctl restart"))
-                    return false;
+                if (exists)
+                {
+                    //---Unit уже существовал: применяем новый ExecStart через restart
+                    if (!runSystemctl({ "restart", u }, { 0 }, error, "systemctl restart"))
+                        return false;
+                }
+                else
+                {
+                    // Unit новый: просто запускаем
+                    if (!runSystemctl({ "start", u }, { 0 }, error, "systemctl start"))
+                        return false;
+                }
             }
 
             return true;

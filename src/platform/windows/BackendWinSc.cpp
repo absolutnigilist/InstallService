@@ -265,6 +265,19 @@ namespace svcinst {
                     return false;   // Если создание не удалось
                 }   
             }   // Конец блока создания новой службы
+            else
+            {
+				//---Если служба уже существует, останавливаем её перед обновлением параметров
+                if (!runSc(
+                    {"stop" , spec.name},
+                    {0,(int)ERROR_SERVICE_NOT_ACTIVE},
+                    error,
+					"sc stop before config"
+                ))
+                {
+					return false;   // Если остановка не удалась
+                }
+            }
             
             //---Всегда выполняем config - обновляем параметры существующей службы
             //   Даже если только что создали службу, настраиваем её параметры
@@ -341,9 +354,9 @@ namespace svcinst {
                 if (error) 
                 {
                     *error = "uninstall: empty service name"; 
-                    LOG(ERROR) << "uninstall: empty service name";
-                    return false;
                 }
+                LOG(ERROR) << "uninstall: empty service name";
+                return false;
             }
             //---Проверяем существование службы
             bool exists = false;
